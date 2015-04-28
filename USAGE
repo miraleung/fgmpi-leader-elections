@@ -1,0 +1,76 @@
+@author Mira Leung
+March 15, 2014
+
+Hirschberg-Sinclair's algorithm (HS)
+-----------------------------------
+Usage:
+mpiexec -nfg X -n Y ./hs  /* for randomly assigned uids */
+
+mpiexec -nfg X -n Y ./hs-random [ -v ] <Process number>  /*process
+number must be at least 7 times larger than and relatively coprime to
+size.*/
+
+mpiexec -nfg X -n Y ./hs-passthru [ -v ] <Process number>  /*process
+number must be at least 7 times larger than and relatively coprime to
+size.*/
+
+Examples:
+---------
+mpiexec -nfg 32 -n 4 ./hs 2557
+mpiexec -nfg 32 -n 4 ./hs-random 2557
+mpiexec -nfg 32 -n 4 ./hs-passthru 2557
+
+
+Lelann/Chang-Roberts algorithm (LCR)
+------------------------------------
+Usage:
+mpiexec -nfg X -n Y ./lcr [ -v ] <Process number> /*process
+number must be at least 7 times larger than and relatively coprime to
+size.*/
+
+mpiexec -nfg X -n Y ./lcr-random [ -v ] <Process number> /*process
+number must be at least 7 times larger than and relatively coprime to
+size.*/
+
+mpiexec -nfg X -n Y ./lcr-passthru [ -v ] <Process number> /*process
+number must be at least 7 times larger than and relatively coprime to
+size.*/
+
+Examples:
+---------
+mpiexec -nfg 32 -n 4 ./lcr 2557
+mpiexec -nfg 32 -n 4 ./lcr-random 2557
+mpiexec -nfg 32 -n 4 ./lcr-passthru 2557
+
+
+ * An implementation of Hirschberg-Sinclair's algorithm
+ * for asynchronous ring leader election. Improvements on the HS algorithm are
+ * as follows (and marked in the code):
+ * 1) Comparing to the maximum uid seen so far, instead of the process's own uid
+ * 2) Reduce the number of election messages sent if a reply has already been received.
+ *
+ * Mesage complexity is in O(n log n):
+ * * Worst case: less than 6n + 8n(ceiling{log n} - 1)
+ * * * Proof: The minimum distance between two winners of a phase k-1 is 2^(k-1)+1, so the
+ *     total number of messags sent at phase k that is not the last phase is
+ *     4(2^k * floor{n/(2^(k-1)+1)}) = 8n * floor{2^(k-1)/(2^(k-1)+1)} < 8n.
+ *
+ *     The total number of phases until the leader is elected is ceiling{log n} + 1,
+ *     including phase 0. 2n messages are sent in the last phase, and there are no reply messages.
+ *     Hence, the total number of messages in the worst case is
+ *     4n + \sum^{\ceiling{log n} - 1}_{k=1}(4 * 2^k * n/(2^(k-1)+1)) + 2n
+ *     <= 6n + 8n(\ceiling{log n} - 1). QED.
+ *
+ * Time complexity: O(n).
+ * * The max total time for each phase k that is not the final one is 2(2^k), so the maximum
+ *   total time required by phases 0 to the second-last one is 2(2^{ceiling(log n} + 1)), and
+ *   the time for the final phase is n.
+ *
+ * Note: The message totals include the round of messages sent at the end to calculate the total.
+ * The actual number sent during the algorithm is the final number minus n, where n = NUM.
+ *
+ * Total number of messages is roughly <= 6n + 8n * (ceiling{log n} - 1) + 3n (for
+ * the final round of message totals), which is 8n*(ceiling{log n}) + n \in O(n log n)
+ *
+ * The program checks if pnum is relatively coprime to and larger than size.
+
